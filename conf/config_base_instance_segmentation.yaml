@@ -1,3 +1,6 @@
+adnd:
+  input_ply: /home/pelesz/Desktop/uni/adnd/Mask3D/ADND/scannet/raw/scans/scene0000_00/scene0000_00_vh_clean_2.ply
+
 general:
   train_mode: true
   task: "instance_segmentation"

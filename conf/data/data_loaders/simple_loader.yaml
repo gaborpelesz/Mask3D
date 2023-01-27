@@ -20,3 +20,10 @@ test_dataloader:
   pin_memory: ${data.pin_memory}
   num_workers: ${data.num_workers}
   batch_size: ${data.test_batch_size}
+
+predict_dataloader:
+  _target_: torch.utils.data.DataLoader
+  shuffle: false
+  pin_memory: ${data.pin_memory}
+  num_workers: ${data.num_workers}
+  batch_size: ${data.test_batch_size}

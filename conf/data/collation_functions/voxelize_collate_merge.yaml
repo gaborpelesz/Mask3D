@@ -34,3 +34,12 @@ test_collation:
   probing: ${general.linear_probing_backbone}
   include_ignore: ${general.include_ignore}
   task: ${general.task}
+
+predict_collation:
+  _target_: datasets.utils.VoxelizeCollate
+  ignore_label: ${data.ignore_label}
+  voxel_size: ${data.voxel_size}
+  mode: ${data.test_mode}
+  probing: ${general.linear_probing_backbone}
+  include_ignore: ${general.include_ignore}
+  task: ${general.task}

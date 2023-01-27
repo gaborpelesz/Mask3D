@@ -402,6 +402,50 @@ class InstanceSegmentation(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         return self.eval_step(batch, batch_idx)
 
+
+    # MODIFIED EVAL_STEP
+    def predict_step(self, batch, batch_idx):
+        data, target, file_names = batch
+        inverse_maps = data.inverse_maps
+        target_full = data.target_full
+        original_colors = data.original_colors
+        data_idx = data.idx
+        original_normals = data.original_normals
+        original_coordinates = data.original_coordinates
+
+        #if len(target) == 0 or len(target_full) == 0:
+        #    print("no targets")
+        #    return None
+
+        if len(data.coordinates) == 0:
+            return 0.
+
+        raw_coordinates = None
+        if self.config.data.add_raw_coordinates:
+            raw_coordinates = data.features[:, -3:]
+            data.features = data.features[:, :-3]
+
+        if raw_coordinates.shape[0] == 0:
+            return 0.
+
+        data = ME.SparseTensor(coordinates=data.coordinates, features=data.features, device=self.device)
+
+
+        try:
+            output = self.forward(data,
+                                  point2segment=[target[i]['point2segment'] for i in range(len(target))],
+                                  raw_coordinates=raw_coordinates,
+                                  is_eval=False)
+        except RuntimeError as run_err:
+            print(run_err)
+            if 'only a single point gives nans in cross-attention' == run_err.args[0]:
+                return None
+            else:
+                raise run_err
+
+        return output
+
+
     def get_full_res_mask(self, mask, inverse_map, point2segment_full, is_heatmap=False):
         mask = mask.detach().cpu()[inverse_map]  # full res
 
@@ -864,12 +908,13 @@ class InstanceSegmentation(pl.LightningModule):
         return [optimizer], [scheduler_config]
 
     def prepare_data(self):
-        self.train_dataset = hydra.utils.instantiate(self.config.data.train_dataset)
-        self.validation_dataset = hydra.utils.instantiate(
-            self.config.data.validation_dataset
-        )
-        self.test_dataset = hydra.utils.instantiate(self.config.data.test_dataset)
-        self.labels_info = self.train_dataset.label_info
+        pass
+        # self.train_dataset = hydra.utils.instantiate(self.config.data.train_dataset)
+        # self.validation_dataset = hydra.utils.instantiate(
+        #     self.config.data.validation_dataset
+        # )
+        # self.test_dataset = hydra.utils.instantiate(self.config.data.test_dataset)
+        # self.labels_info = self.train_dataset.label_info
 
     def train_dataloader(self):
         c_fn = hydra.utils.instantiate(self.config.data.train_collation)
@@ -892,5 +937,13 @@ class InstanceSegmentation(pl.LightningModule):
         return hydra.utils.instantiate(
             self.config.data.test_dataloader,
             self.test_dataset,
+            collate_fn=c_fn,
+        )
+
+    def predict_dataloader(self):
+        c_fn = hydra.utils.instantiate(self.config.data.predict_collation)
+        return hydra.utils.instantiate(
+            # self.config.data.predict_dataloader,
+            # self.predict_dataset,
             collate_fn=c_fn,
         )
